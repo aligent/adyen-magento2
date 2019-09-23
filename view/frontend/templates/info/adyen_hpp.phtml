@@ -38,9 +38,9 @@ $_info = $this->getInfo();
         <dt><?php echo $block->escapeHtml(__('Pay using Bank transfer')); ?></dt>
         <dd><?php echo $block->escapeHtml(__('Please transfer the amount using the reference below to the following bank account')); ?></dd>
 
-        <?php if (!empty($order->getGrandTotal())) : ?>
+        <?php if (!empty($order->getBaseGrandTotal())) : ?>
             <dt><?php echo $block->escapeHtml(__('Amount')); ?></dt>
-            <dd><?php echo $order->formatPrice($order->getGrandTotal()); ?></dd>
+            <dd><?php echo $order->formatPrice($order->getBaseGrandTotal()); ?></dd>
         <?php endif; ?>
 
         <?php if (!empty($banktranferData['bankTransfer.reference'])) : ?>

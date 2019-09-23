@@ -142,8 +142,8 @@ class AdyenPaymentProcess implements AdyenPaymentProcessInterface
         $request = $this->adyenRequestHelper->buildAddressData($request, $billingAddress, $shippingAddress);
 
         // PaymentDataBuilder
-        $currencyCode = $quote->getQuoteCurrencyCode();
-        $amount = $quote->getGrandTotal();
+        $currencyCode = $quote->getBaseCurrencyCode();
+        $amount = $quote->getBaseGrandTotal();
 
         // Setting the orderid to null, so that we generate a new one for each /payments call
         $quote->setReservedOrderId(null);

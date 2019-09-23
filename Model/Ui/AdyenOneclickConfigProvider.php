@@ -176,7 +176,7 @@ class AdyenOneclickConfigProvider implements ConfigProviderInterface
         if ($this->_customerSession->isLoggedIn()) {
             $customerId = $this->_customerSession->getCustomerId();
             $storeId = $this->_storeManager->getStore()->getId();
-            $grandTotal = $this->_getQuote()->getGrandTotal();
+            $grandTotal = $this->_getQuote()->getBaseGrandTotal();
             $recurringType = $this->_getRecurringContractType();
 
             $billingAgreements = $this->_adyenHelper->getOneClickPaymentMethods(

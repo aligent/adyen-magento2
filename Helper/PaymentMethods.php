@@ -275,7 +275,7 @@ class PaymentMethods extends AbstractHelper
      */
     protected function getCurrentPaymentAmount()
     {
-        if (($grandTotal = $this->getQuote()->getGrandTotal()) > 0) {
+        if (($grandTotal = $this->getQuote()->getBaseGrandTotal()) > 0) {
             return $grandTotal;
         }
         return 10;

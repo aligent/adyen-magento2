@@ -318,7 +318,7 @@ class Redirect extends \Magento\Payment\Block\Form
     protected function setOpenInvoiceData($formFields)
     {
         $count = 0;
-        $currency = $this->_order->getOrderCurrencyCode();
+        $currency = $this->_order->getBaseCurrencyCode();
 
         foreach ($this->_order->getAllVisibleItems() as $item) {
             /** @var $item \Magento\Sales\Model\Order\Item */
@@ -329,10 +329,10 @@ class Redirect extends \Magento\Payment\Block\Form
                 $formFields,
                 $count,
                 $item->getName(),
-                $item->getPrice(),
+                $item->getBasePrice(),
                 $currency,
-                $item->getTaxAmount(),
-                $item->getPriceInclTax(),
+                $item->getBaseTaxAmount(),
+                $item->getBasePriceInclTax(),
                 $item->getTaxPercent(),
                 $numberOfItems,
                 $this->_order->getPayment(),
@@ -341,11 +341,11 @@ class Redirect extends \Magento\Payment\Block\Form
         }
 
         // Discount cost
-        if ($this->_order->getDiscountAmount() > 0 || $this->_order->getDiscountAmount() < 0) {
+        if ($this->_order->getBaseDiscountAmount() > 0 || $this->_order->getBaseDiscountAmount() < 0) {
             ++$count;
 
             $description = __('Total Discount');
-            $itemAmount = $this->_adyenHelper->formatAmount($this->_order->getDiscountAmount(), $currency);
+            $itemAmount = $this->_adyenHelper->formatAmount($this->_order->getBaseDiscountAmount(), $currency);
             $itemVatAmount = "0";
             $itemVatPercentage = "0";
             $numberOfItems = 1;
@@ -365,14 +365,14 @@ class Redirect extends \Magento\Payment\Block\Form
         }
 
         // Shipping cost
-        if ($this->_order->getShippingAmount() > 0 || $this->_order->getShippingTaxAmount() > 0) {
+        if ($this->_order->getBaseShippingAmount() > 0 || $this->_order->getBaseShippingTaxAmount() > 0) {
             ++$count;
             $formFields = $this->_adyenHelper->createOpenInvoiceLineShipping(
                 $formFields,
                 $count,
                 $this->_order,
-                $this->_order->getShippingAmount(),
-                $this->_order->getShippingTaxAmount(),
+                $this->_order->getBaseShippingAmount(),
+                $this->_order->getBaseShippingTaxAmount(),
                 $currency,
                 $this->_order->getPayment()
             );

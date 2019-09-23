@@ -74,11 +74,11 @@ class RefundDataBuilder implements BuilderInterface
         $order = $paymentDataObject->getOrder();
         $payment = $paymentDataObject->getPayment();
         $pspReference = $payment->getCcTransId();
-        $currency = $payment->getOrder()->getOrderCurrencyCode();
+        $currency = $payment->getOrder()->getBaseCurrencyCode();
         $storeId = $order->getStoreId();
         $method = $payment->getMethod();
         $merchantAccount = $this->adyenHelper->getAdyenMerchantAccount($method, $storeId);
-        $grandTotal = $payment->getOrder()->getGrandTotal();
+        $grandTotal = $payment->getOrder()->getBaseGrandTotal();
 
 
         // check if it contains a split payment
@@ -185,7 +185,7 @@ class RefundDataBuilder implements BuilderInterface
     {
         $formFields = [];
         $count = 0;
-        $currency = $payment->getOrder()->getOrderCurrencyCode();
+        $currency = $payment->getOrder()->getBaseCurrencyCode();
 
         /**
          * @var \Magento\Sales\Model\Order\Creditmemo $creditMemo
@@ -200,10 +200,10 @@ class RefundDataBuilder implements BuilderInterface
                 $formFields,
                 $count,
                 $refundItem->getName(),
-                $refundItem->getPrice(),
+                $refundItem->getBasePrice(),
                 $currency,
-                $refundItem->getTaxAmount(),
-                $refundItem->getPriceInclTax(),
+                $refundItem->getBaseTaxAmount(),
+                $refundItem->getBasePriceInclTax(),
                 $refundItem->getOrderItem()->getTaxPercent(),
                 $numberOfItems,
                 $payment,
@@ -212,14 +212,14 @@ class RefundDataBuilder implements BuilderInterface
         }
 
         // Shipping cost
-        if ($creditMemo->getShippingAmount() > 0) {
+        if ($creditMemo->getBaseShippingAmount() > 0) {
             ++$count;
             $formFields = $this->adyenHelper->createOpenInvoiceLineShipping(
                 $formFields,
                 $count,
                 $payment->getOrder(),
-                $creditMemo->getShippingAmount(),
-                $creditMemo->getShippingTaxAmount(),
+                $creditMemo->getBaseShippingAmount(),
+                $creditMemo->getBaseShippingTaxAmount(),
                 $currency,
                 $payment
             );

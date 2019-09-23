@@ -63,10 +63,10 @@ $_isDemoMode = $block->isDemoMode();
     <div>
         <table class="edit-order-table" style="text-align:left; margin-top:5px; margin-bottom:0;">
             <tbody>
-            <?php if (!empty($order->getGrandTotal())) : ?>
+            <?php if (!empty($order->getBaseGrandTotal())) : ?>
                 <tr>
                     <th><?php echo $block->escapeHtml(__('Amount')); ?></th>
-                    <td><?php echo $order->formatPrice($order->getGrandTotal()); ?></td>
+                    <td><?php echo $order->formatPrice($order->getBaseGrandTotal()); ?></td>
                 </tr>
             <?php endif; ?>
 

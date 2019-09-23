@@ -62,7 +62,7 @@ class CaptureDataBuilder implements BuilderInterface
         $payment = $paymentDataObject->getPayment();
 
         $pspReference = $payment->getCcTransId();
-        $currency = $payment->getOrder()->getOrderCurrencyCode();
+        $currency = $payment->getOrder()->getBaseCurrencyCode();
 
         $amount = $this->adyenHelper->formatAmount($amount, $currency);
 
@@ -95,11 +95,12 @@ class CaptureDataBuilder implements BuilderInterface
     {
         $formFields = [];
         $count = 0;
-        $currency = $payment->getOrder()->getOrderCurrencyCode();
+        $currency = $payment->getOrder()->getBaseCurrencyCode();
 
         $invoices = $payment->getOrder()->getInvoiceCollection();
 
         // The latest invoice will contain only the selected items(and quantities) for the (partial) capture
+        /** @var \Magento\Sales\Api\Data\InvoiceInterface $latestInvoice */
         $latestInvoice = $invoices->getLastItem();
 
         foreach ($latestInvoice->getItems() as $invoiceItem) {
@@ -109,10 +110,10 @@ class CaptureDataBuilder implements BuilderInterface
                 $formFields,
                 $count,
                 $invoiceItem->getName(),
-                $invoiceItem->getPrice(),
+                $invoiceItem->getBasePrice(),
                 $currency,
-                $invoiceItem->getTaxAmount(),
-                $invoiceItem->getPriceInclTax(),
+                $invoiceItem->getBaseTaxAmount(),
+                $invoiceItem->getBasePriceInclTax(),
                 $invoiceItem->getOrderItem()->getTaxPercent(),
                 $numberOfItems,
                 $payment,
@@ -121,14 +122,14 @@ class CaptureDataBuilder implements BuilderInterface
         }
 
         // Shipping cost
-        if ($latestInvoice->getShippingAmount() > 0) {
+        if ($latestInvoice->getBaseShippingAmount() > 0) {
             ++$count;
             $formFields = $this->adyenHelper->createOpenInvoiceLineShipping(
                 $formFields,
                 $count,
                 $payment->getOrder(),
-                $latestInvoice->getShippingAmount(),
-                $latestInvoice->getShippingTaxAmount(),
+                $latestInvoice->getBaseShippingAmount(),
+                $latestInvoice->getBaseShippingTaxAmount(),
                 $currency,
                 $payment
             );
