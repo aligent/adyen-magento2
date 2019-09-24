@@ -288,7 +288,7 @@ class PaymentMethods extends AbstractHelper
      */
     protected function getCurrentCurrencyCode($store)
     {
-        return $this->getQuote()->getQuoteCurrencyCode() ?: $store->getBaseCurrencyCode();
+        return $this->getQuote()->getBaseCurrencyCode() ?: $store->getBaseCurrencyCode();
     }
 
     /**
