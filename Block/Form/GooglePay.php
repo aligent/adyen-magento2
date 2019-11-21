@@ -22,13 +22,28 @@
  * Author: Adyen <magento@adyen.com>
  */
 
-namespace Adyen\Payment\Api;
+namespace Adyen\Payment\Block\Form;
 
-interface AdyenPaymentProcessInterface
+class GooglePay extends \Magento\Payment\Block\Form
 {
     /**
-     * @param string $payload
-     * @return string
+     * @var \Adyen\Payment\Helper\Data
      */
-    public function initiate($payload);
+    protected $adyenHelper;
+
+    /**
+     * GooglePay constructor.
+     *
+     * @param \Magento\Framework\View\Element\Template\Context $context
+     * @param \Adyen\Payment\Helper\Data $adyenHelper
+     * @param array $data
+     */
+    public function __construct(
+        \Magento\Framework\View\Element\Template\Context $context,
+        \Adyen\Payment\Helper\Data $adyenHelper,
+        array $data = []
+    ) {
+        parent::__construct($context, $data);
+        $this->adyenHelper = $adyenHelper;
+    }
 }

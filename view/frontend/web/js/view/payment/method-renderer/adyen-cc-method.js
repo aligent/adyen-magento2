@@ -37,9 +37,10 @@ define(
         'Magento_Paypal/js/action/set-payment-method',
         'Magento_Checkout/js/action/select-payment-method',
         'Adyen_Payment/js/threeds2-js-utils',
-        'Adyen_Payment/js/model/threeds2'
+        'Adyen_Payment/js/model/threeds2',
+        'Magento_Checkout/js/model/error-processor'
     ],
-    function ($, ko, Component, customer, creditCardData, additionalValidators, quote, installments, url, VaultEnabler, urlBuilder, storage, fullScreenLoader, setPaymentMethodAction, selectPaymentMethodAction, threeDS2Utils, threeds2) {
+    function ($, ko, Component, customer, creditCardData, additionalValidators, quote, installmentsHelper, url, VaultEnabler, urlBuilder, storage, fullScreenLoader, setPaymentMethodAction, selectPaymentMethodAction, threeDS2Utils, threeds2, errorProcessor) {
 
         'use strict';
 
@@ -65,10 +66,7 @@ define(
 
                 // initialize adyen component for general use
                 this.checkout = new AdyenCheckout({
-                    locale: this.getLocale(),
-                    risk: {
-                        enabled: false
-                    }
+                    locale: this.getLocale()
                 });
 
                 return this;
@@ -83,13 +81,13 @@ define(
                         'expiryMonth',
                         'expiryYear',
                         'installment',
+                        'installments',
                         'creditCardDetailsValid',
                         'placeOrderAllowed'
                     ]);
 
                 return this;
             },
-            getInstallments: installments.getInstallments(),
             /**
              * Returns true if card details can be stored
              * @returns {*|boolean}
@@ -104,17 +102,17 @@ define(
              * set up the installments
              */
             renderSecureFields: function () {
-                var self = this;
+                let self = this;
 
                 if (!self.getOriginKey()) {
                     return;
                 }
 
-                installments.setInstallments(0);
+                self.installments(0);
 
-                // installments enabled ??
-                var allInstallments = self.getAllInstallments();
-                var cardNode = document.getElementById('cardContainer');
+                // installments
+                let allInstallments = self.getAllInstallments();
+                let cardNode = document.getElementById('cardContainer');
 
                 self.cardComponent = self.checkout.create('card', {
                     originKey: self.getOriginKey(),
@@ -147,35 +145,24 @@ define(
                         if (creditCardType) {
                             // If the credit card type is already set, check if it changed or not
                             if (!self.creditCardType() || self.creditCardType() && self.creditCardType() != creditCardType) {
+                                let numberOfInstallments = [];
+
                                 if (creditCardType in allInstallments) {
 
                                     // get for the creditcard the installments
-                                    var installmentCreditcard = allInstallments[creditCardType];
-                                    var grandTotal = quote.totals().grand_total;
+                                    let installmentCreditcard = allInstallments[creditCardType];
+                                    let grandTotal = quote.totals().grand_total;
+                                    let precision = quote.getPriceFormat().precision;
+                                    let currencyCode = quote.totals().quote_currency_code;
 
-                                    var numberOfInstallments = [];
-                                    var dividedAmount = 0;
-                                    var dividedString = "";
-                                    $.each(installmentCreditcard, function (amount, installment) {
-
-                                        if (grandTotal >= amount) {
-                                            dividedAmount = (grandTotal / installment).toFixed(quote.getPriceFormat().precision);
-                                            dividedString = installment + " x " + dividedAmount + " " + quote.totals().quote_currency_code;
-                                            numberOfInstallments.push({
-                                                key: [dividedString],
-                                                value: installment
-                                            });
-                                        }
-                                        else {
-                                            return false;
-                                        }
-                                    });
+                                    numberOfInstallments = installmentsHelper.getInstallmentsWithPrices(installmentCreditcard, grandTotal, precision, currencyCode);
                                 }
+
                                 if (numberOfInstallments) {
-                                    installments.setInstallments(numberOfInstallments);
+                                    self.installments(numberOfInstallments);
                                 }
                                 else {
-                                    installments.setInstallments(0);
+                                    self.installments(0);
                                 }
                             }
 
@@ -188,7 +175,7 @@ define(
                             }
                         } else {
                             self.creditCardType("")
-                            installments.setInstallments(0);
+                            self.installments(0);
                         }
                     }
                 }).mount(cardNode);
@@ -206,7 +193,6 @@ define(
              */
             renderThreeDS2Component: function (type, token) {
                 var self = this;
-
                 var threeDS2Node = document.getElementById('threeDS2Container');
 
                 if (type == "IdentifyShopper") {
@@ -214,9 +200,11 @@ define(
                         .create('threeDS2DeviceFingerprint', {
                             fingerprintToken: token,
                             onComplete: function (result) {
+                                self.threeDS2IdentifyComponent.unmount();
                                 threeds2.processThreeDS2(result.data).done(function (responseJSON) {
                                     self.validateThreeDS2OrPlaceOrder(responseJSON)
-                                }).error(function () {
+                                }).fail(function (result) {
+                                    errorProcessor.process(result, self.messageContainer);
                                     self.isPlaceOrderActionAllowed(true);
                                     fullScreenLoader.stopLoader();
                                 });
@@ -248,18 +236,19 @@ define(
                             challengeToken: token,
                             size: '05',
                             onComplete: function (result) {
+                                self.threeDS2ChallengeComponent.unmount();
                                 self.closeModal(popupModal);
 
                                 fullScreenLoader.startLoader();
                                 threeds2.processThreeDS2(result.data).done(function (responseJSON) {
                                     self.validateThreeDS2OrPlaceOrder(responseJSON);
-                                }).error(function () {
+                                }).fail(function (result) {
+                                    errorProcessor.process(result, self.messageContainer);
                                     self.isPlaceOrderActionAllowed(true);
                                     fullScreenLoader.stopLoader();
                                 });
                             },
                             onError: function (error) {
-                                self.closeModal(popupModal);
                                 console.log(JSON.stringify(error));
                             }
                         });
@@ -274,6 +263,7 @@ define(
                 popupModal.modal("closeModal");
                 $('.threeDS2Modal').remove();
                 $('.modals-overlay').remove();
+                $('body').removeClass('_has-modal');
 
                 // reconstruct the threeDS2Modal container again otherwise component can not find the threeDS2Modal
                 $('#threeDS2Wrapper').append("<div id=\"threeDS2Modal\">" +
@@ -281,16 +271,16 @@ define(
                     "</div>");
             },
             /**
-             * Builds the payment details part of the payment information reqeust
-             *
-             * @returns {{method: *, additional_data: {cc_type: *, number: *, cvc: *, expiryMonth: *, expiryYear: *, holderName: *, store_cc: (boolean|*), number_of_installments: *, java_enabled: () => boolean, screen_color_depth: number, screen_width, screen_height, timezone_offset: *, language: *}}}
+             * Get data for place order
+             * @returns {{method: *}}
              */
-            getCcData: function () {
+            getData: function () {
                 const browserInfo = threeDS2Utils.getBrowserInfo();
 
                 var data = {
                     'method': this.item.method,
                     additional_data: {
+                        'guestEmail': quote.guestEmail,
                         'cc_type': this.creditCardType(),
                         'number': this.creditCardNumber(),
                         'cvc': this.securityCode(),
@@ -307,23 +297,8 @@ define(
                         'language': browserInfo.language
                     }
                 };
-
                 this.vaultEnabler.visitAdditionalData(data);
                 return data;
-            },
-            /**
-             * Get data for place order
-             * @returns {{method: *}}
-             */
-            getData: function () {
-                return {
-                    'method': this.item.method,
-                    additional_data: {
-                        'cc_type': this.creditCardType(),
-                        'store_cc': this.storeCc,
-                        'number_of_installments': this.installment()
-                    }
-                };
             },
             /**
              * Returns state of place order button
@@ -352,27 +327,6 @@ define(
                     fullScreenLoader.startLoader();
                     self.isPlaceOrderActionAllowed(false);
 
-                    threeds2.processPayment(this.getCcData()).done(function (responseJSON) {
-                        self.validateThreeDS2OrPlaceOrder(responseJSON);
-                    }).error(function () {
-                        fullScreenLoader.stopLoader();
-                        self.isPlaceOrderActionAllowed(true);
-                    });
-                }
-            },
-            /**
-             * Based on the response we can start a 3DS2 validation or place the order
-             * @param responseJSON
-             */
-            validateThreeDS2OrPlaceOrder: function (responseJSON) {
-                var self = this;
-
-                var response = JSON.parse(responseJSON);
-
-                if (!!response.threeDS2) {
-                    // render component
-                    self.renderThreeDS2Component(response.type, response.token);
-                } else {
                     self.getPlaceOrderDeferredObject()
                         .fail(
                             function () {
@@ -380,16 +334,28 @@ define(
                                 self.isPlaceOrderActionAllowed(true);
                             }
                         ).done(
-                        function () {
+                        function (response) {
                             self.afterPlaceOrder();
-
-                            if (self.redirectAfterPlaceOrder) {
-                                // use custom redirect Link for supporting 3D secure
-                                window.location.replace(url.build(
-                                    window.checkoutConfig.payment[quote.paymentMethod().method].redirectUrl)
-                                );
-                            }
+                            self.validateThreeDS2OrPlaceOrder(response);
                         }
+                    );
+                }
+                return false;
+            },
+            /**
+             * Based on the response we can start a 3DS2 validation or place the order
+             * @param responseJSON
+             */
+            validateThreeDS2OrPlaceOrder: function (responseJSON) {
+                var self = this;
+                var response = JSON.parse(responseJSON);
+
+                if (!!response.threeDS2) {
+                    // render component
+                    self.renderThreeDS2Component(response.type, response.token);
+                } else {
+                    window.location.replace(url.build(
+                        window.checkoutConfig.payment[quote.paymentMethod().method].redirectUrl)
                     );
                 }
             },

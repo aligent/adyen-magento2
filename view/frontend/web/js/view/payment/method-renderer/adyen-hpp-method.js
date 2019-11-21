@@ -82,10 +82,7 @@ define(
                  * @type {AdyenCheckout}
                  */
                 self.checkoutComponent = new AdyenCheckout({
-                    locale: self.getLocale(),
-                    risk: {
-                        enabled: false
-                    }
+                    locale: self.getLocale()
                 });
 
                 // reset variable:
@@ -517,13 +514,6 @@ define(
                         'value': value
                     }
                 });
-            },
-            /** Redirect to adyen */
-            continueToAdyen: function () {
-                if (this.validate() && additionalValidators.validate()) {
-                    this.placeRedirectOrder(this.getData());
-                    return false;
-                }
             },
             continueToAdyenBrandCode: function () {
                 // set payment method to adyen_hpp
